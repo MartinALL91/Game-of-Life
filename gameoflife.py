@@ -5,6 +5,9 @@ import io
 
 
 def first_generation(input_pattern: io.TextIOWrapper) -> np.ndarray:
+    # Transform ASCII pattern to NumPy array
+    # where 1 represents a live cell and 0
+    # a dead cell
     pattern: List = []
     line: str
     for line in input_pattern:
@@ -34,6 +37,8 @@ def first_generation(input_pattern: io.TextIOWrapper) -> np.ndarray:
 
 
 def pad_array(arr: np.ndarray) -> np.ndarray:
+    # Pad array with zeros on left, right, top
+    # and bottom
     len_x: int
     len_y: int
     len_x, len_y = arr.shape
@@ -44,7 +49,9 @@ def pad_array(arr: np.ndarray) -> np.ndarray:
     return arr
 
 
-def next_generation(arr: np.ndarray) -> np.ndarray:
+def next_generation(arr: np.ndarray, b: np.ndarray, s: np.ndarray) -> np.ndarray:
+    # Create next generation according to birth
+    # and survival rules
     next_pattern_np: np.ndarray = np.zeros((arr.shape), dtype=np.int32)
     arr_padded: np.ndarray = pad_array(arr)
     row_idx: int
@@ -56,14 +63,12 @@ def next_generation(arr: np.ndarray) -> np.ndarray:
         for cell_idx, cell in enumerate(row):
             neighbors: int = arr_padded[row_idx:row_idx+3,cell_idx:cell_idx+3].sum() - arr_padded[row_idx+1, cell_idx+1]
             if cell == 1:
-                if neighbors < 2:
-                    status = 0
-                elif neighbors < 4:
+                if neighbors in s:
                     status = cell
                 else:
                     status = 0
             else:
-                if neighbors == 3:
+                if neighbors in b:
                     status = 1
                 else:
                     status = cell
@@ -71,6 +76,7 @@ def next_generation(arr: np.ndarray) -> np.ndarray:
     return next_pattern_np
 
 def print_output(arr: np.ndarray) -> str:
+    # Transform NumPy array to ASCII pattern  
     output: str = ''
     row: np.ndarray
     cell: int
@@ -85,11 +91,28 @@ def print_output(arr: np.ndarray) -> str:
         output += '\n'
     return output
 
+def rules(rulestring: str) -> np.ndarray:
+	# Split rulestring to  birth and survival
+	# rules 
+	birth: List = []
+	survival: List = []
+	birth_rule: str
+	survival_rule: str
+	birth_rule, survival_rule = rulestring.split('/')
+	number_live_neighbors: str
+	for number_live_neighbors in birth_rule[1:]:
+		birth.append(number_live_neighbors)
+	for number_live_neighbors in survival_rule[1:]:
+		survival.append(number_live_neighbors)
+	return np.array(birth, dtype=np.int32), np.array(survival, dtype=np.int32)
 
 
-def main(input_pattern):
+def main(input_pattern, rulestring):
 	first_gen: np.ndarray = first_generation(input_pattern)
-	next_gen: np.ndarray = next_generation(first_gen)
+	b: np.ndarray
+	s: np.ndarray
+	b, s = rules(rulestring)
+	next_gen: np.ndarray = next_generation(first_gen, b, s)
 	output: str = print_output(next_gen)
 	sys.stdout.write(output)  
 
@@ -97,6 +120,8 @@ def main(input_pattern):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Game of Life Kata')
 	parser.add_argument('--input-pattern', type=argparse.FileType('r'), default=sys.stdin)
+	parser.add_argument('--rulestring', type=str, default='B3/S23')
 	args = parser.parse_args()
 	input_pattern = args.input_pattern
-	main(input_pattern)
+	rulestring = args.rulestring
+	main(input_pattern, rulestring)
